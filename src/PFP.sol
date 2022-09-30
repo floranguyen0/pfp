@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -12,10 +12,12 @@ import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "./interfaces/IERC4494.sol";
 import "./ERC721A.sol";
 
-contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
+contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     using Strings for uint256;
 
-    // PUBLIC VARIABLES
+    /*//////////////////////////////////////////////////////////////
+                           PUBLIC VARIABLES
+    //////////////////////////////////////////////////////////////*/
 
     // PERMIT_TYPEHASH value is equal to
     // keccak256("Permit(address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
@@ -35,37 +37,47 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
     bool public presaleFlag;
     bool public freeMintFlag;
 
-    // INTERNAL VARIABLES
+    /*//////////////////////////////////////////////////////////////
+                          INTERNAL VARIABLES
+    //////////////////////////////////////////////////////////////*/
 
     bytes32 internal immutable NAME_HASH;
     bytes32 internal immutable VERSION_HASH;
     bytes32 internal immutable INITIAL_DOMAIN_SEPARATOR;
     uint256 internal immutable INITIAL_CHAIN_ID;
 
-    // PRIVATE VARIABLES
+    /*//////////////////////////////////////////////////////////////
+                          PRIVATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
 
-    uint32 private _royaltyRate;
+    uint192 private _toReveal;
+    uint64 private _royaltyRate;
     bytes32 private _presaleMerkleRoot;
     bytes32 private _freeMintMerkleRoot;
     string private baseURI_;
     string private _preRevealURI;
 
-    //EVENTS
+    /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
 
-    event FlagSwitched(bool isActive);
-    event RoyaltyRateUpdated(uint32 amount);
-    event PreRevealURIUpdated(string uri);
-    event BaseURIUpdated(string uri);
-    event PresaleMerkleRootUpdated(bytes32 root);
-    event PublicPriceUpdated(uint256 price);
-    event PresalePriceUpdated(uint256 price);
-    event MaxPerAddressUpdated(uint32 quantity);
-    event PresaleSupplyUpdated(uint32 quantity);
-    event FreeMintSupplyUpdated(uint32 quantity);
+    event FlagSwitched(bool indexed isActive);
+    event RoyaltyRateUpdated(uint32 indexed amount);
+    event PreRevealURIUpdated(string indexed uri);
+    event BaseURIUpdated(string indexed uri);
+    event PresaleMerkleRootUpdated(bytes32 indexed root);
+    event PublicPriceUpdated(uint256 indexed price);
+    event PresalePriceUpdated(uint256 indexed price);
+    event MaxPerAddressUpdated(uint32 indexed quantity);
+    event PresaleSupplyUpdated(uint32 indexed quantity);
+    event FreeMintSupplyUpdated(uint32 indexed quantity);
+    event RevealNumberUpdated(uint256 indexed amount);
 
     error WithdrawEthFailed();
 
-    // MODIFIERS
+    /*//////////////////////////////////////////////////////////////
+                              MODIFIERS
+    //////////////////////////////////////////////////////////////*/
 
     modifier isSufficientSupply(uint256 quantity) {
         require(
@@ -75,14 +87,18 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
         _;
     }
 
-    // MAPPINGS
+    /*//////////////////////////////////////////////////////////////
+                               MAPPINGS
+    //////////////////////////////////////////////////////////////*/
 
     mapping(address => uint256) public publicMinted;
     mapping(address => uint256) public presaleMinted;
     mapping(address => uint256) public freeMintMinted;
     mapping(uint256 => uint256) private _nonces;
 
-    // CONSTRUCTOR
+    /*//////////////////////////////////////////////////////////////
+                             CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
 
     constructor(
         string memory name,
@@ -100,126 +116,13 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
         transferOwnership(multisigAddress);
     }
 
-    // EXTERNAL FUNCTIONS
-
-    function royaltyInfo(uint256 tokenId, uint256 salePrice)
-        external
-        view
-        returns (address, uint256)
-    {
-        uint256 royaltyAmount = (salePrice * _royaltyRate) / SCALE;
-        return (owner(), royaltyAmount);
-    }
-
-    /// @notice gets the global royalty rate
-    /// @dev divide rate by scale to get the percentage taken as royalties
-    /// @return a tuple of (rate, scale)
-    function royaltyRate() external view returns (uint256, uint256) {
-        return (_royaltyRate, SCALE);
-    }
-
-    // PUBLIC FUNCTIONS
-
-    function setPublicPrice(uint256 price) public onlyOwner {
-        publicPrice = price;
-
-        emit PublicPriceUpdated(price);
-    }
-
-    function setPresalePrice(uint256 price) public onlyOwner {
-        presalePrice = price;
-
-        emit PresalePriceUpdated(price);
-    }
-
-    function setPublicMaxPerAddress(uint32 quantity) public onlyOwner {
-        publicMaxPerAddress = quantity;
-
-        emit MaxPerAddressUpdated(quantity);
-    }
-
-    function setPresaleMaxPerAddress(uint32 quantity) public onlyOwner {
-        presaleMaxPerAddress = quantity;
-
-        emit MaxPerAddressUpdated(quantity);
-    }
-
-    function setFreeMintMaxPerAddress(uint32 quantity) public onlyOwner {
-        freeMintMaxPerAddress = quantity;
-
-        emit MaxPerAddressUpdated(quantity);
-    }
-
-    function setPresaleSupply(uint32 quantity) public onlyOwner {
-        presaleSupply = quantity;
-
-        emit PresaleSupplyUpdated(quantity);
-    }
-
-    function setFreeMintSupply(uint32 quantity) public onlyOwner {
-        freeMintSupply = quantity;
-
-        emit FreeMintSupplyUpdated(quantity);
-    }
-
-    function setRoyaltyRate(uint32 rate) public onlyOwner {
-        _royaltyRate = rate;
-
-        emit RoyaltyRateUpdated(rate);
-    }
-
-    function setBaseURI(string memory uri) public onlyOwner {
-        baseURI_ = uri;
-
-        emit BaseURIUpdated(uri);
-    }
-
-    function setPreRevealURI(string memory uri) public onlyOwner {
-        _preRevealURI = uri;
-
-        emit PreRevealURIUpdated(uri);
-    }
-
-    function setPresaleMerkleRoot(bytes32 merkleRoot) public onlyOwner {
-        _presaleMerkleRoot = merkleRoot;
-
-        emit PresaleMerkleRootUpdated(merkleRoot);
-    }
-
-    function setFreeMintMerkleRoot(bytes32 merkleRoot) public onlyOwner {
-        _freeMintMerkleRoot = merkleRoot;
-
-        emit PresaleMerkleRootUpdated(merkleRoot);
-    }
-
-    function switchPublicFlag() public onlyOwner {
-        bool publicFlag_ = publicFlag;
-
-        publicFlag = !publicFlag_;
-
-        emit FlagSwitched(publicFlag_);
-    }
-
-    function switchPresaleFlag() public onlyOwner {
-        bool presaleFlag_ = presaleFlag;
-
-        presaleFlag = !presaleFlag_;
-
-        emit FlagSwitched(presaleFlag_);
-    }
-
-    function switchFreemintFlag() public onlyOwner {
-        bool freeMintFlag_ = freeMintFlag;
-
-        freeMintFlag = !freeMintFlag_;
-
-        emit FlagSwitched(freeMintFlag_);
-    }
+    /*//////////////////////////////////////////////////////////////
+                          EXTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function mint(address to, uint256 quantity)
-        public
+        external
         payable
-        nonReentrant
         isSufficientSupply(quantity)
     {
         require(publicFlag, "Public sale not active");
@@ -234,16 +137,13 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
 
         publicMinted[msg.sender] = publicMinted[msg.sender] + quantity;
         _safeMint(to, quantity);
-
-        (bool success, ) = owner().call{value: msg.value}("");
-        require(success, "Mint: ETH transfer failed");
     }
 
     function presaleMint(
         address to,
         uint256 quantity,
         bytes32[] calldata proof
-    ) public payable nonReentrant {
+    ) external payable {
         address sender = msg.sender;
 
         require(presaleFlag, "Presale mint is not active");
@@ -273,16 +173,13 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
 
         presaleMinted[sender] = presaleMinted[sender] + quantity;
         _safeMint(to, quantity, "");
-
-        (bool success, ) = owner().call{value: msg.value}("");
-        require(success, "Presale mint: ETH transfer failed");
     }
 
     function freeMint(
         address to,
         uint256 quantity,
         bytes32[] calldata proof
-    ) public payable nonReentrant {
+    ) external payable {
         address sender = msg.sender;
 
         require(freeMintFlag, "Free mint is not active");
@@ -312,29 +209,141 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
 
     // NOTE: in current structure, must mint entire allotted quantity in one mint
     function founderMint(address to, uint256 quantity)
-        public
+        external
         payable
         onlyOwner
-        nonReentrant
         isSufficientSupply(quantity)
     {
         _safeMint(to, quantity, "");
     }
 
-    function crossmint(address to, uint256 quantity) public payable {
-        require(
-            msg.sender == 0xdAb1a1854214684acE522439684a145E62505233,
-            "This function is for Crossmint only."
-        );
-        mint(to, quantity);
-    }
+    function withdrawFunds(uint256 weiAmount) external onlyOwner {
+        require(address(this).balance >= weiAmount, "Insufficient balance");
 
-    function withdrawFunds() public onlyOwner {
-        (bool success, ) = owner().call{value: address(this).balance}("");
+        (bool success, ) = owner().call{value: weiAmount}("");
         if (!success) revert WithdrawEthFailed();
     }
 
-    // ERC721A RELATED FUNCTIONS
+    function setRevealNumber(uint192 amount) external onlyOwner {
+        _toReveal = amount;
+        emit RevealNumberUpdated(amount);
+    }
+
+    function setPublicPrice(uint256 price) external onlyOwner {
+        publicPrice = price;
+
+        emit PublicPriceUpdated(price);
+    }
+
+    function setPresalePrice(uint256 price) external onlyOwner {
+        presalePrice = price;
+
+        emit PresalePriceUpdated(price);
+    }
+
+    function setPublicMaxPerAddress(uint32 quantity) external onlyOwner {
+        publicMaxPerAddress = quantity;
+
+        emit MaxPerAddressUpdated(quantity);
+    }
+
+    function setPresaleMaxPerAddress(uint32 quantity) external onlyOwner {
+        presaleMaxPerAddress = quantity;
+
+        emit MaxPerAddressUpdated(quantity);
+    }
+
+    function setFreeMintMaxPerAddress(uint32 quantity) external onlyOwner {
+        freeMintMaxPerAddress = quantity;
+
+        emit MaxPerAddressUpdated(quantity);
+    }
+
+    function setPresaleSupply(uint32 quantity) external onlyOwner {
+        presaleSupply = quantity;
+
+        emit PresaleSupplyUpdated(quantity);
+    }
+
+    function setFreeMintSupply(uint32 quantity) external onlyOwner {
+        freeMintSupply = quantity;
+
+        emit FreeMintSupplyUpdated(quantity);
+    }
+
+    function setRoyaltyRate(uint32 rate) external onlyOwner {
+        _royaltyRate = rate;
+
+        emit RoyaltyRateUpdated(rate);
+    }
+
+    function setBaseURI(string memory uri) external onlyOwner {
+        baseURI_ = uri;
+
+        emit BaseURIUpdated(uri);
+    }
+
+    function setPreRevealURI(string memory uri) external onlyOwner {
+        _preRevealURI = uri;
+
+        emit PreRevealURIUpdated(uri);
+    }
+
+    function setPresaleMerkleRoot(bytes32 merkleRoot) external onlyOwner {
+        _presaleMerkleRoot = merkleRoot;
+
+        emit PresaleMerkleRootUpdated(merkleRoot);
+    }
+
+    function setFreeMintMerkleRoot(bytes32 merkleRoot) external onlyOwner {
+        _freeMintMerkleRoot = merkleRoot;
+
+        emit PresaleMerkleRootUpdated(merkleRoot);
+    }
+
+    function switchPublicFlag() external onlyOwner {
+        bool publicFlag_ = publicFlag;
+
+        publicFlag = !publicFlag_;
+
+        emit FlagSwitched(publicFlag_);
+    }
+
+    function switchPresaleFlag() external onlyOwner {
+        bool presaleFlag_ = presaleFlag;
+
+        presaleFlag = !presaleFlag_;
+
+        emit FlagSwitched(presaleFlag_);
+    }
+
+    function switchFreemintFlag() external onlyOwner {
+        bool freeMintFlag_ = freeMintFlag;
+
+        freeMintFlag = !freeMintFlag_;
+
+        emit FlagSwitched(freeMintFlag_);
+    }
+
+    function royaltyInfo(uint256 tokenId, uint256 salePrice)
+        external
+        view
+        returns (address, uint256)
+    {
+        uint256 royaltyAmount = (salePrice * _royaltyRate) / SCALE;
+        return (owner(), royaltyAmount);
+    }
+
+    /// @notice gets the global royalty rate
+    /// @dev divide rate by scale to get the percentage taken as royalties
+    /// @return a tuple of (rate, scale)
+    function royaltyRate() external view returns (uint256, uint256) {
+        return (_royaltyRate, SCALE);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      ERC721A RELATED FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function transferFrom(
         address from,
@@ -367,7 +376,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
     {
         require(_exists(tokenId), "URI query for nonexistent token");
 
-        if (bytes(baseURI_).length != 0) {
+        if (bytes(baseURI_).length != 0 && tokenId <= _toReveal) {
             return
                 string(abi.encodePacked(baseURI_, tokenId.toString(), SUFFIX));
         }
@@ -383,7 +392,9 @@ contract PFP is ERC721A, IERC2981, IERC4494, ReentrancyGuard, Ownable {
         return baseURI_;
     }
 
-    // IERC4494 RELATED FUNCTIONS
+    /*//////////////////////////////////////////////////////////////
+                      IERC4494 RELATED FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function nonces(uint256 tokenId) external view returns (uint256) {
         require(_exists(tokenId), "Nonces: Query for nonexistent token");
