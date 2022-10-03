@@ -7,3 +7,6 @@
 [submodule "lib/ERC721A.git"]
 	path = lib/ERC721A.git
 	url = https://github.com/chiru-labs/ERC721A.git
+[submodule "lib/murky.git"]
+	path = lib/murky.git
+	url = https://github.com/dmfxyz/murky.git
