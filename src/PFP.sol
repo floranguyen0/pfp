@@ -69,8 +69,6 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     event FreeMintSupplyUpdated(uint32 indexed quantity);
     event RevealNumberUpdated(uint256 indexed amount);
 
-    error WithdrawEthFailed();
-
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
     //////////////////////////////////////////////////////////////*/
@@ -213,11 +211,15 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         _safeMint(to, quantity, "");
     }
 
-    function withdrawFunds(uint256 weiAmount) external onlyOwner {
-        require(address(this).balance >= weiAmount, "Insufficient balance");
-
-        (bool success, ) = owner().call{value: weiAmount}("");
-        if (!success) revert WithdrawEthFailed();
+    function execTransaction(
+        address target,
+        bytes calldata data,
+        uint256 weiAmount
+    ) external payable onlyOwner {
+        (bool success, bytes memory reason) = target.call{value: weiAmount}(
+            data
+        );
+        require(success, string(reason));
     }
 
     function setRevealNumber(uint192 amount) external onlyOwner {
