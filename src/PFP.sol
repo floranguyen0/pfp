@@ -121,7 +121,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         payable
         isSufficientSupply(quantity)
     {
-        require(publicFlag, "Public sale not active");
+        require(publicFlag, "Public sale is not active");
         require(msg.value >= publicPrice * quantity, "Mint: Insufficient ETH");
 
         if (publicMaxPerAddress > 0) {
@@ -302,7 +302,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         publicFlag = !publicFlag_;
 
-        emit FlagSwitched(publicFlag_);
+        emit FlagSwitched(!publicFlag_);
     }
 
     function switchPresaleFlag() external onlyOwner {
@@ -310,7 +310,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         presaleFlag = !presaleFlag_;
 
-        emit FlagSwitched(presaleFlag_);
+        emit FlagSwitched(!presaleFlag_);
     }
 
     function switchFreemintFlag() external onlyOwner {
@@ -318,7 +318,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         freeMintFlag = !freeMintFlag_;
 
-        emit FlagSwitched(freeMintFlag_);
+        emit FlagSwitched(!freeMintFlag_);
     }
 
     function royaltyInfo(uint256 tokenId, uint256 salePrice)
@@ -380,12 +380,12 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         return _preRevealURI;
     }
 
-    function _startTokenId() internal pure override returns (uint256) {
-        return 1;
-    }
-
     function _baseURI() internal view override returns (string memory) {
         return baseURI_;
+    }
+
+    function _startTokenId() internal pure override returns (uint256) {
+        return 1;
     }
 
     /*//////////////////////////////////////////////////////////////
