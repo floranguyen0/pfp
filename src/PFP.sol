@@ -101,15 +101,12 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
         string memory symbol,
         string memory version,
         uint256 maxSupply_,
-        address multisigAddress
     ) ERC721A(name, symbol) {
         NAME_HASH = keccak256(bytes(name));
         VERSION_HASH = keccak256(bytes(version));
         INITIAL_DOMAIN_SEPARATOR = _computeDomainSeparator();
         INITIAL_CHAIN_ID = block.chainid;
         MAX_SUPPLY = maxSupply_;
-
-        transferOwnership(multisigAddress);
     }
 
     /*//////////////////////////////////////////////////////////////
