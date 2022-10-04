@@ -4,11 +4,11 @@ pragma solidity ^0.8.15;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/interfaces/IERC2981.sol";
+import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "./interfaces/IERC4494.sol";
 import "./ERC721A.sol";
 
-contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
+contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
     using Strings for uint256;
 
     /*//////////////////////////////////////////////////////////////
@@ -20,9 +20,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     bytes32 public constant PERMIT_TYPEHASH =
         0x49ecf333e5b8c95c40fdafc95c1ad136e8914a8fb55e9dc8bb01eaa83a2df9ad;
     bytes32 public constant SUFFIX = ".json";
-    uint256 public constant SCALE = 1e5;
     uint256 public immutable MAX_SUPPLY;
-    uint64 public royaltyRate;
     uint256 public publicPrice;
     uint256 public presalePrice;
     uint32 public publicMaxPerAddress;
@@ -63,7 +61,6 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     event FounderMint(address to, uint256 quantity);
     event ExecTransaction(address target, bytes data, uint256 weiAmount);
     event FlagSwitched(bool indexed isActive);
-    event RoyaltyRateUpdated(uint32 indexed amount);
     event PreRevealURIUpdated(string indexed uri);
     event BaseURIUpdated(string indexed uri);
     event PresaleMerkleRootUpdated(bytes32 indexed root);
@@ -290,12 +287,6 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         emit FreeMintSupplyUpdated(quantity);
     }
 
-    function setRoyaltyRate(uint32 rate) external onlyOwner {
-        royaltyRate = rate;
-
-        emit RoyaltyRateUpdated(rate);
-    }
-
     function setBaseURI(string memory uri) external onlyOwner {
         baseURI_ = uri;
 
@@ -344,15 +335,6 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         emit FlagSwitched(!freeMintFlag_);
     }
 
-    function royaltyInfo(uint256 tokenId, uint256 salePrice)
-        external
-        view
-        returns (address, uint256)
-    {
-        uint256 royaltyAmount = (salePrice * royaltyRate) / SCALE;
-        return (owner(), royaltyAmount);
-    }
-
     /*//////////////////////////////////////////////////////////////
                       ERC721A RELATED FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -368,18 +350,6 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
                 _nonces[tokenId]++;
             }
         }
-    }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721A, IERC165)
-        returns (bool)
-    {
-        return
-            ERC721A.supportsInterface(interfaceId) ||
-            interfaceId == type(IERC2981).interfaceId ||
-            interfaceId == type(IERC4494).interfaceId;
     }
 
     function tokenURI(uint256 tokenId)
@@ -404,6 +374,45 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
     function _startTokenId() internal pure override returns (uint256) {
         return 1;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      ERC2982 RELATED FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721A, ERC2981, IERC165)
+        returns (bool)
+    {
+        return
+            ERC721A.supportsInterface(interfaceId) ||
+            ERC2981.supportsInterface(interfaceId) ||
+            interfaceId == type(IERC4494).interfaceId;
+    }
+
+    function setDefaultRoyalty(address receiver, uint96 feeNumerator)
+        external
+        onlyOwner
+    {
+        _setDefaultRoyalty(receiver, feeNumerator);
+    }
+
+    function deleteDefaultRoyalty() external onlyOwner {
+        _deleteDefaultRoyalty();
+    }
+
+    function setTokenRoyalty(
+        uint256 tokenId,
+        address receiver,
+        uint96 feeNumerator
+    ) external onlyOwner {
+        _setTokenRoyalty(tokenId, receiver, feeNumerator);
+    }
+
+    function resetTokenRoyalty(uint256 tokenId) external onlyOwner {
+        _resetTokenRoyalty(tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
