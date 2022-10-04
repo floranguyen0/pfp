@@ -26,8 +26,6 @@ contract PFPTest is Test {
     event FreeMintSupplyUpdated(uint32 indexed quantity);
     event RevealNumberUpdated(uint256 indexed amount);
 
-    error WithdrawEthFailed();
-
     function setUp() public {
         pfp = new PFP("NFTName", "NFTN", "1.0", 10_000, owner);
         vm.startPrank(owner);
@@ -166,6 +164,21 @@ contract PFPTest is Test {
         pfp.founderMint(owner, 3000);
         vm.stopPrank();
     }
+
+    function testExecTransaction() public {
+        vm.deal(address(pfp), 200 ether);
+        vm.prank(owner);
+        pfp.execTransaction(owner, new bytes(0), 100 ether);
+        assertEq(address(pfp).balance, 100 ether);
+        assertEq(owner.balance, 100 ether);
+
+        vm.prank(owner);
+        pfp.execTransaction(owner, new bytes(0), address(pfp).balance);
+        assertEq(address(pfp).balance, 0);
+        assertEq(owner.balance, 200 ether);
+    }
+
+    function testCannotExecTransaction() public {}
 
     function testCannotFounderMint() public {
         vm.prank(owner);
