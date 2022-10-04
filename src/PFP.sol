@@ -33,18 +33,13 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
     bool public freeMintFlag;
 
     /*//////////////////////////////////////////////////////////////
-                          INTERNAL VARIABLES
-    //////////////////////////////////////////////////////////////*/
-
-    bytes32 internal immutable NAME_HASH;
-    bytes32 internal immutable VERSION_HASH;
-    bytes32 internal immutable INITIAL_DOMAIN_SEPARATOR;
-    uint256 internal immutable INITIAL_CHAIN_ID;
-
-    /*//////////////////////////////////////////////////////////////
                           PRIVATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-
+    
+    bytes32 private immutable NAME_HASH;
+    bytes32 private immutable VERSION_HASH;
+    bytes32 private immutable INITIAL_DOMAIN_SEPARATOR;
+    uint256 private immutable INITIAL_CHAIN_ID;
     uint192 private _toReveal;
     bytes32 private _presaleMerkleRoot;
     bytes32 private _freeMintMerkleRoot;
@@ -100,7 +95,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
         string memory name,
         string memory symbol,
         string memory version,
-        uint256 maxSupply_,
+        uint256 maxSupply_
     ) ERC721A(name, symbol) {
         NAME_HASH = keccak256(bytes(name));
         VERSION_HASH = keccak256(bytes(version));
