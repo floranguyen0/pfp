@@ -53,6 +53,10 @@ contract PFPTest is Test {
 
     function testCannotMint() public {
         vm.prank(owner);
+        vm.expectRevert("Insufficient token supply");
+        pfp.mint(owner, 15_000);
+
+        vm.prank(owner);
         pfp.switchPublicFlag();
         vm.prank(address1);
         vm.expectRevert("Public sale is not active");
