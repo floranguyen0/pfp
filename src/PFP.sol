@@ -129,12 +129,14 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         if (publicMaxPerAddress > 0) {
             require(
-                quantity + publicMinted[msg.sender] <= publicMaxPerAddress,
+                publicMinted[msg.sender] + quantity <= publicMaxPerAddress,
                 "Mint: Amount exceeds max per address"
             );
         }
 
-        publicMinted[msg.sender] = publicMinted[msg.sender] + quantity;
+        unchecked {
+            publicMinted[msg.sender] = publicMinted[msg.sender] + quantity;
+        }
         _safeMint(to, quantity);
 
         emit Mint(to, quantity);
@@ -153,7 +155,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
             "Presale mint: Insufficient ETH"
         );
         require(
-            quantity + totalSupply() <= presaleSupply,
+            totalSupply() + quantity <= presaleSupply,
             "Insufficient presale token supply"
         );
         require(
@@ -167,12 +169,14 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         if (presaleMaxPerAddress > 0) {
             require(
-                quantity + presaleMinted[sender] <= presaleMaxPerAddress,
+                presaleMinted[sender] + quantity <= presaleMaxPerAddress,
                 "Presale mint: Amount exceeds max per address"
             );
         }
 
-        presaleMinted[sender] = presaleMinted[sender] + quantity;
+        unchecked {
+            presaleMinted[sender] = presaleMinted[sender] + quantity;
+        }
         _safeMint(to, quantity, "");
 
         emit PresaleMint(to, quantity);
@@ -187,7 +191,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         require(freeMintFlag, "Free mint is not active");
         require(
-            quantity + totalSupply() <= freeMintSupply,
+            totalSupply() + quantity <= freeMintSupply,
             "Insufficient free-mint token supply"
         );
         require(
@@ -201,12 +205,14 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         if (freeMintMaxPerAddress > 0) {
             require(
-                quantity + freeMintMinted[sender] <= freeMintMaxPerAddress,
+                freeMintMinted[sender] + quantity <= freeMintMaxPerAddress,
                 "Free mint: Amount exceeds max per address"
             );
         }
 
-        freeMintMinted[sender] = freeMintMinted[sender] + quantity;
+        unchecked {
+            freeMintMinted[sender] = freeMintMinted[sender] + quantity;
+        }
         _safeMint(to, quantity, "");
 
         emit FreeMint(to, quantity);
@@ -358,7 +364,9 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     ) public payable override {
         ERC721A.transferFrom(from, to, tokenId);
         if (from != address(0)) {
-            _nonces[tokenId]++;
+            unchecked {
+                _nonces[tokenId]++;
+            }
         }
     }
 
