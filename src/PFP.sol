@@ -22,6 +22,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     bytes32 public constant SUFFIX = ".json";
     uint256 public constant SCALE = 1e5;
     uint256 public immutable MAX_SUPPLY;
+    uint64 public royaltyRate;
     uint256 public publicPrice;
     uint256 public presalePrice;
     uint32 public publicMaxPerAddress;
@@ -47,7 +48,6 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     //////////////////////////////////////////////////////////////*/
 
     uint192 private _toReveal;
-    uint64 private _royaltyRate;
     bytes32 private _presaleMerkleRoot;
     bytes32 private _freeMintMerkleRoot;
     string private baseURI_;
@@ -57,6 +57,11 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    event Mint(address to, uint256 quantity);
+    event PresaleMint(address to, uint256 quantity);
+    event FreeMint(address to, uint256 quantity);
+    event FounderMint(address to, uint256 quantity);
+    event ExecTransaction(address target, bytes data, uint256 weiAmount);
     event FlagSwitched(bool indexed isActive);
     event RoyaltyRateUpdated(uint32 indexed amount);
     event PreRevealURIUpdated(string indexed uri);
@@ -131,6 +136,8 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         publicMinted[msg.sender] = publicMinted[msg.sender] + quantity;
         _safeMint(to, quantity);
+
+        emit Mint(to, quantity);
     }
 
     function presaleMint(
@@ -167,6 +174,8 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         presaleMinted[sender] = presaleMinted[sender] + quantity;
         _safeMint(to, quantity, "");
+
+        emit PresaleMint(to, quantity);
     }
 
     function freeMint(
@@ -199,6 +208,8 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
 
         freeMintMinted[sender] = freeMintMinted[sender] + quantity;
         _safeMint(to, quantity, "");
+
+        emit FreeMint(to, quantity);
     }
 
     // NOTE: in current structure, must mint entire allotted quantity in one mint
@@ -209,6 +220,8 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         isSufficientSupply(quantity)
     {
         _safeMint(to, quantity, "");
+
+        emit FounderMint(to, quantity);
     }
 
     function execTransaction(
@@ -220,6 +233,8 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
             data
         );
         require(success, string(reason));
+
+        emit ExecTransaction(target, data, weiAmount);
     }
 
     function setRevealNumber(uint192 amount) external onlyOwner {
@@ -270,7 +285,7 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
     }
 
     function setRoyaltyRate(uint32 rate) external onlyOwner {
-        _royaltyRate = rate;
+        royaltyRate = rate;
 
         emit RoyaltyRateUpdated(rate);
     }
@@ -328,15 +343,8 @@ contract PFP is ERC721A, IERC2981, IERC4494, Ownable {
         view
         returns (address, uint256)
     {
-        uint256 royaltyAmount = (salePrice * _royaltyRate) / SCALE;
+        uint256 royaltyAmount = (salePrice * royaltyRate) / SCALE;
         return (owner(), royaltyAmount);
-    }
-
-    /// @notice gets the global royalty rate
-    /// @dev divide rate by scale to get the percentage taken as royalties
-    /// @return a tuple of (rate, scale)
-    function royaltyRate() external view returns (uint256, uint256) {
-        return (_royaltyRate, SCALE);
     }
 
     /*//////////////////////////////////////////////////////////////
