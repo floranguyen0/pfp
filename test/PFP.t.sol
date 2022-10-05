@@ -8,9 +8,9 @@ import "../lib/murky.git/src/Merkle.sol";
 
 contract PFPTest is Test {
     PFP public pfp;
-    address owner = vm.addr(1);
-    address address1 = vm.addr(2);
-    address address2 = vm.addr(3);
+    address address1 = vm.addr(1);
+    address address2 = vm.addr(2);
+    address address3 = vm.addr(3);
     address address29 = vm.addr(30);
     bytes32[] whitelistedAddressHashes;
 
@@ -27,8 +27,7 @@ contract PFPTest is Test {
     event RevealNumberUpdated(uint256 indexed amount);
 
     function setUp() public {
-        pfp = new PFP("NFTName", "NFTN", "1.0", 10_000, owner);
-        vm.startPrank(owner);
+        pfp = new PFP("NFTName", "NFTN", "1.0", 10_000);
 
         pfp.switchPublicFlag();
         // price is 0.001 eth
@@ -40,73 +39,68 @@ contract PFPTest is Test {
 
     function testMint(uint256 amount) public {
         amount = bound(amount, 1, 100);
-        vm.deal(address1, 100 ether);
-        vm.prank(address1);
-        pfp.mint{value: 1 ether}(address1, amount);
+        vm.deal(address2, 100 ether);
+        vm.prank(address2);
+        pfp.mint{value: 1 ether}(address2, amount);
 
-        assertEq(pfp.publicMinted(address1), amount);
-        assertEq(pfp.balanceOf(address1), amount);
+        assertEq(pfp.publicMinted(address2), amount);
+        assertEq(pfp.balanceOf(address2), amount);
         assertEq(pfp.totalSupply(), amount);
     }
 
     function testCannotMint() public {
-        vm.prank(owner);
         vm.expectRevert("Insufficient token supply");
-        pfp.mint(owner, 15_000);
+        pfp.mint(address1, 15_000);
 
-        vm.prank(owner);
         pfp.switchPublicFlag();
-        vm.prank(address1);
+        vm.prank(address2);
         vm.expectRevert("Public sale is not active");
-        pfp.mint(address1, 20);
+        pfp.mint(address2, 20);
 
-        vm.prank(owner);
         pfp.switchPublicFlag();
-        vm.prank(address1);
+        vm.prank(address2);
         vm.expectRevert("Mint: Insufficient ETH");
-        pfp.mint(address1, 15);
+        pfp.mint(address2, 15);
 
-        vm.prank(address1);
-        vm.deal(address1, 10 ether);
+        vm.prank(address2);
+        vm.deal(address2, 10 ether);
         vm.expectRevert("Mint: Amount exceeds max per address");
-        pfp.mint{value: 1 ether}(address1, 200);
+        pfp.mint{value: 1 ether}(address2, 200);
     }
 
     function testPresaleMint(uint256 amount) public {
         amount = bound(amount, 1, 100);
         Merkle merkle = new Merkle();
-        vm.prank(owner);
         pfp.switchPresaleFlag();
 
         _setPresaleMerkleRoot();
-        // get proof for address2
+        // get proof for address3
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 2);
 
-        vm.prank(address2);
-        vm.deal(address2, 100 ether);
-        pfp.presaleMint{value: 1 ether}(address2, amount, proof);
-        assertEq(pfp.presaleMinted(address2), amount);
-        assertEq(pfp.balanceOf(address2), amount);
+        vm.prank(address3);
+        vm.deal(address3, 100 ether);
+        pfp.presaleMint{value: 1 ether}(address3, amount, proof);
+        assertEq(pfp.presaleMinted(address3), amount);
+        assertEq(pfp.balanceOf(address3), amount);
         assertEq(pfp.totalSupply(), amount);
     }
 
     function testCannotPresaleMint() public {
         Merkle merkle = new Merkle();
         _setPresaleMerkleRoot();
-        // get proof for address2
+        // get proof for address3
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 2);
-        vm.deal(address2, 100 ether);
+        vm.deal(address3, 100 ether);
 
         vm.expectRevert("Presale mint is not active");
-        pfp.presaleMint(address2, 10, proof);
+        pfp.presaleMint(address3, 10, proof);
 
-        vm.prank(owner);
         pfp.switchPresaleFlag();
         vm.expectRevert("Presale mint: Insufficient ETH");
-        pfp.presaleMint{value: 100}(address2, 40, proof);
+        pfp.presaleMint{value: 100}(address3, 40, proof);
 
         vm.expectRevert("Insufficient presale token supply");
-        pfp.presaleMint{value: 10 ether}(address1, 1100, proof);
+        pfp.presaleMint{value: 10 ether}(address2, 1100, proof);
 
         vm.deal(vm.addr(40), 10 ether);
         vm.prank(vm.addr(40));
@@ -114,14 +108,13 @@ contract PFPTest is Test {
         pfp.presaleMint{value: 1 ether}(vm.addr(40), 10, proof);
 
         vm.expectRevert("Presale mint: Amount exceeds max per address");
-        vm.prank(address2);
-        pfp.presaleMint{value: 10 ether}(address1, 150, proof);
+        vm.prank(address3);
+        pfp.presaleMint{value: 10 ether}(address2, 150, proof);
     }
 
     function testFreeMint(uint256 amount) public {
         amount = bound(amount, 1, 50);
         Merkle merkle = new Merkle();
-        vm.prank(owner);
         pfp.switchFreemintFlag();
 
         _setFreeMintMerkleRoot();
@@ -144,10 +137,9 @@ contract PFPTest is Test {
         vm.expectRevert("Free mint is not active");
         pfp.freeMint(address29, 10, proof);
 
-        vm.prank(owner);
         pfp.switchFreemintFlag();
         vm.expectRevert("Insufficient free-mint token supply");
-        pfp.freeMint(address1, 600, proof);
+        pfp.freeMint(address2, 600, proof);
 
         vm.expectRevert("Invalid merkle proof");
         pfp.freeMint(vm.addr(40), 10, proof);
@@ -158,35 +150,31 @@ contract PFPTest is Test {
     }
 
     function testFounderMint() public {
-        vm.startPrank(owner);
-        pfp.founderMint(address1, 50);
-        pfp.founderMint(address2, 2000);
-        pfp.founderMint(owner, 3000);
-        vm.stopPrank();
+        pfp.founderMint(address2, 50);
+        pfp.founderMint(address3, 2000);
+        pfp.founderMint(address1, 3000);
     }
 
     function testExecTransaction() public {
         vm.deal(address(pfp), 200 ether);
-        vm.prank(owner);
-        pfp.execTransaction(owner, new bytes(0), 100 ether);
+        pfp.execTransaction(address1, new bytes(0), 100 ether);
         assertEq(address(pfp).balance, 100 ether);
-        assertEq(owner.balance, 100 ether);
+        assertEq(address1.balance, 100 ether);
 
-        vm.prank(owner);
-        pfp.execTransaction(owner, new bytes(0), address(pfp).balance);
+        pfp.execTransaction(address1, new bytes(0), address(pfp).balance);
         assertEq(address(pfp).balance, 0);
-        assertEq(owner.balance, 200 ether);
+        assertEq(address1.balance, 200 ether);
     }
 
     function testCannotExecTransaction() public {}
 
     function testCannotFounderMint() public {
-        vm.prank(owner);
         vm.expectRevert("Insufficient token supply");
-        pfp.founderMint(owner, 20_000);
+        pfp.founderMint(address1, 20_000);
 
         vm.expectRevert("Ownable: caller is not the owner");
-        pfp.founderMint(owner, 100);
+        vm.prank(address1);
+        pfp.founderMint(address1, 100);
     }
 
     function _setPresaleMerkleRoot() private {
@@ -198,13 +186,11 @@ contract PFPTest is Test {
             );
         }
         bytes32 root = merkle.getRoot(whitelistedAddressHashes);
-        vm.startPrank(owner);
         // price is 0.0001 eth
         pfp.setPresalePrice(10**14);
         pfp.setPresaleMerkleRoot(root);
         pfp.setPresaleSupply(1000);
         pfp.setPresaleMaxPerAddress(100);
-        vm.stopPrank();
     }
 
     function _setFreeMintMerkleRoot() private {
@@ -216,10 +202,8 @@ contract PFPTest is Test {
             );
         }
         bytes32 root = merkle.getRoot(whitelistedAddressHashes);
-        vm.startPrank(owner);
         pfp.setFreeMintMerkleRoot(root);
         pfp.setFreeMintSupply(500);
         pfp.setFreeMintMaxPerAddress(50);
-        vm.stopPrank();
     }
 }
