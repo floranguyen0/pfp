@@ -51,10 +51,10 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Mint(address to, uint256 quantity);
-    event PresaleMint(address to, uint256 quantity);
-    event FreeMint(address to, uint256 quantity);
-    event FounderMint(address to, uint256 quantity);
+    event Mint(address indexed to, uint256 indexed quantity);
+    event PresaleMint(address indexed to, uint256 indexed quantity);
+    event FreeMint(address indexed to, uint256 indexed quantity);
+    event FounderMint(address indexed to, uint256 indexed quantity);
     event ExecTransaction(address target, bytes data, uint256 weiAmount);
     event FlagSwitched(bool indexed isActive);
     event PreRevealURIUpdated(string indexed uri);
@@ -382,7 +382,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     }
 
     /*//////////////////////////////////////////////////////////////
-                      ERC2982 RELATED FUNCTIONS
+                      ERC2981 RELATED FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     function supportsInterface(bytes4 interfaceId)
