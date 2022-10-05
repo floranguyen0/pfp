@@ -48,9 +48,9 @@ contract PFPTest is Test {
 
         vm.expectEmit(true, true, false, false);
         emit Mint(address2, amount);
-        console2.log(address2);
         pfp.mint{value: 1 ether}(address2, amount);
 
+        assertEq(address(pfp).balance, 10**15 * amount);
         assertEq(pfp.publicMinted(address1), amount);
         assertEq(pfp.balanceOf(address2), amount);
         assertEq(pfp.totalSupply(), amount);
@@ -91,6 +91,7 @@ contract PFPTest is Test {
         emit PresaleMint(address3, amount);
         pfp.presaleMint{value: 1 ether}(address3, amount, proof);
 
+        assertEq(address(pfp).balance, 10**14 * amount);
         assertEq(pfp.presaleMinted(address3), amount);
         assertEq(pfp.balanceOf(address3), amount);
         assertEq(pfp.totalSupply(), amount);
@@ -185,7 +186,11 @@ contract PFPTest is Test {
         assertEq(address1.balance, 200 ether);
     }
 
-    function testCannotExecTransaction() public {}
+    function testCannotExecTransaction() public {
+        vm.prank(address1);
+        vm.expectRevert("Ownable: caller is not the owner");
+        pfp.execTransaction(address(this), "", 1 ether);
+    }
 
     function testCannotFounderMint() public {
         vm.expectRevert("Insufficient token supply");
