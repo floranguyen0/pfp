@@ -25,7 +25,9 @@ contract PFPTest is Test {
     event PresaleMerkleRootUpdated(bytes32 indexed root);
     event PublicPriceUpdated(uint256 indexed price);
     event PresalePriceUpdated(uint256 indexed price);
-    event MaxPerAddressUpdated(uint32 indexed quantity);
+    event PublicMaxPerAddressUpdated(uint32 indexed quantity);
+    event PresaleMaxPerAddressUpdated(uint32 indexed quantity);
+    event FreeMintMaxPerAddressUpdated(uint32 indexed quantity);
     event PresaleSupplyUpdated(uint32 indexed quantity);
     event FreeMintSupplyUpdated(uint32 indexed quantity);
     event RevealNumberUpdated(uint256 indexed amount);
@@ -81,7 +83,7 @@ contract PFPTest is Test {
         Merkle merkle = new Merkle();
         pfp.switchPresaleFlag();
 
-        _setPresaleMerkleRoot();
+        _presaleSetup();
         // get proof for address3
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 2);
 
@@ -99,7 +101,7 @@ contract PFPTest is Test {
 
     function testCannotPresaleMint() public {
         Merkle merkle = new Merkle();
-        _setPresaleMerkleRoot();
+        _presaleSetup();
         // get proof for address3
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 2);
         vm.deal(address3, 100 ether);
@@ -129,7 +131,7 @@ contract PFPTest is Test {
         Merkle merkle = new Merkle();
         pfp.switchFreemintFlag();
 
-        _setFreeMintMerkleRoot();
+        _freeMintSetUp();
         // get proof for address29
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 0);
 
@@ -145,7 +147,7 @@ contract PFPTest is Test {
 
     function testCannotFreeMint() public {
         Merkle merkle = new Merkle();
-        _setFreeMintMerkleRoot();
+        _freeMintSetUp();
         // get proof for address29
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 0);
 
@@ -201,7 +203,82 @@ contract PFPTest is Test {
         pfp.founderMint(address1, 100);
     }
 
-    function _setPresaleMerkleRoot() private {
+    function testSetRevealNumber() public {}
+
+    function testSetPublicPrice() public {
+        vm.expectEmit(true, false, false, false);
+        emit PublicPriceUpdated(10**18);
+        pfp.setPublicPrice(10**18);
+        assertEq(pfp.publicPrice(), 10**18);
+    }
+
+    function testSetPresalePrice() public {
+        vm.expectEmit(true, false, false, false);
+        emit PresalePriceUpdated(10**17);
+        pfp.setPresalePrice(10**17);
+        assertEq(pfp.presalePrice(), 10**17);
+    }
+
+    function testSetPublicMaxPerAddress() public {
+        vm.expectEmit(true, false, false, false);
+        emit PublicMaxPerAddressUpdated(300);
+        pfp.setPublicMaxPerAddress(300);
+        assertEq(pfp.publicMaxPerAddress(), 300);
+    }
+
+    function testSetPresaleMaxPerAddress() public {
+        vm.expectEmit(true, false, false, false);
+        emit PresaleMaxPerAddressUpdated(200);
+        pfp.setPresaleMaxPerAddress(200);
+        assertEq(pfp.presaleMaxPerAddress(), 200);
+    }
+
+    function testSetFreeMintMaxPerAddress() public {
+        vm.expectEmit(true, false, false, false);
+        emit FreeMintMaxPerAddressUpdated(50);
+        pfp.setFreeMintMaxPerAddress(50);
+        assertEq(pfp.freeMintMaxPerAddress(), 50);
+    }
+
+    function testSetPresaleSupply() public {
+        vm.expectEmit(true, false, false, false);
+        emit PresaleSupplyUpdated(1000);
+        pfp.setPresaleSupply(1000);
+        assertEq(pfp.presaleSupply(), 1000);
+    }
+
+    function testSetFreeMintSupply() public {
+        vm.expectEmit(true, false, false, false);
+        emit FreeMintSupplyUpdated(500);
+        pfp.setFreeMintSupply(500);
+        assertEq(pfp.freeMintSupply(), 500);
+    }
+
+    function testSwitchPublicFlag() public {
+        assertEq(pfp.publicFlag(), true);
+        vm.expectEmit(true, false, false, false);
+        emit FlagSwitched(false);
+        pfp.switchPublicFlag();
+        assertEq(pfp.publicFlag(), false);
+    }
+
+    function testSwitchPresaleFlag() public {
+        assertEq(pfp.presaleFlag(), false);
+        vm.expectEmit(true, false, false, false);
+        emit FlagSwitched(true);
+        pfp.switchPresaleFlag();
+        assertEq(pfp.presaleFlag(), true);
+    }
+
+    function testSwitchFreemintFlag() public {
+        assertEq(pfp.freeMintFlag(), false);
+        vm.expectEmit(true, false, false, false);
+        emit FlagSwitched(true);
+        pfp.switchFreemintFlag();
+        assertEq(pfp.freeMintFlag(), true);
+    }
+
+    function _presaleSetup() private {
         Merkle merkle = new Merkle();
         // generate whitelisted address hashes
         for (uint256 i = 1; i < 30; i++) {
@@ -217,7 +294,7 @@ contract PFPTest is Test {
         pfp.setPresaleMaxPerAddress(100);
     }
 
-    function _setFreeMintMerkleRoot() private {
+    function _freeMintSetUp() private {
         Merkle merkle = new Merkle();
         // generate whitelisted address hashes
         for (uint256 i = 30; i < 60; i++) {
