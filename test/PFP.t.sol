@@ -14,8 +14,12 @@ contract PFPTest is Test {
     address address29 = vm.addr(30);
     bytes32[] whitelistedAddressHashes;
 
+    event Mint(address indexed to, uint256 indexed quantity);
+    event PresaleMint(address indexed to, uint256 indexed quantity);
+    event FreeMint(address indexed to, uint256 indexed quantity);
+    event FounderMint(address indexed to, uint256 indexed quantity);
+    event ExecTransaction(address target, bytes data, uint256 weiAmount);
     event FlagSwitched(bool indexed isActive);
-    event RoyaltyRateUpdated(uint32 indexed amount);
     event PreRevealURIUpdated(string indexed uri);
     event BaseURIUpdated(string indexed uri);
     event PresaleMerkleRootUpdated(bytes32 indexed root);
@@ -32,18 +36,22 @@ contract PFPTest is Test {
         pfp.switchPublicFlag();
         // price is 0.001 eth
         pfp.setPublicPrice(10**15);
-        pfp.setPublicMaxPerAddress(100);
+        pfp.setPublicMaxPerAddress(300);
 
         vm.stopPrank();
     }
 
     function testMint(uint256 amount) public {
-        amount = bound(amount, 1, 100);
-        vm.deal(address2, 100 ether);
-        vm.prank(address2);
+        amount = bound(amount, 1, 300);
+        vm.deal(address1, 100 ether);
+        vm.prank(address1);
+
+        vm.expectEmit(true, true, false, false);
+        emit Mint(address2, amount);
+        console2.log(address2);
         pfp.mint{value: 1 ether}(address2, amount);
 
-        assertEq(pfp.publicMinted(address2), amount);
+        assertEq(pfp.publicMinted(address1), amount);
         assertEq(pfp.balanceOf(address2), amount);
         assertEq(pfp.totalSupply(), amount);
     }
@@ -65,7 +73,7 @@ contract PFPTest is Test {
         vm.prank(address2);
         vm.deal(address2, 10 ether);
         vm.expectRevert("Mint: Amount exceeds max per address");
-        pfp.mint{value: 1 ether}(address2, 200);
+        pfp.mint{value: 1 ether}(address2, 500);
     }
 
     function testPresaleMint(uint256 amount) public {
@@ -79,7 +87,10 @@ contract PFPTest is Test {
 
         vm.prank(address3);
         vm.deal(address3, 100 ether);
+        vm.expectEmit(true, true, false, false);
+        emit PresaleMint(address3, amount);
         pfp.presaleMint{value: 1 ether}(address3, amount, proof);
+
         assertEq(pfp.presaleMinted(address3), amount);
         assertEq(pfp.balanceOf(address3), amount);
         assertEq(pfp.totalSupply(), amount);
@@ -122,7 +133,10 @@ contract PFPTest is Test {
         bytes32[] memory proof = merkle.getProof(whitelistedAddressHashes, 0);
 
         vm.prank(address29);
+        vm.expectEmit(true, true, false, false);
+        emit FreeMint(address29, amount);
         pfp.freeMint(address29, amount, proof);
+
         assertEq(pfp.freeMintMinted(address29), amount);
         assertEq(pfp.balanceOf(address29), amount);
         assertEq(pfp.totalSupply(), amount);
@@ -149,10 +163,15 @@ contract PFPTest is Test {
         pfp.freeMint(address29, 51, proof);
     }
 
-    function testFounderMint() public {
-        pfp.founderMint(address2, 50);
-        pfp.founderMint(address3, 2000);
-        pfp.founderMint(address1, 3000);
+    function testFounderMint(uint256 amount) public {
+        amount = bound(amount, 1, 10_000);
+
+        vm.expectEmit(true, true, false, false);
+        emit FounderMint(address2, amount);
+        pfp.founderMint(address2, amount);
+
+        assertEq(pfp.balanceOf(address2), amount);
+        assertEq(pfp.totalSupply(), amount);
     }
 
     function testExecTransaction() public {
