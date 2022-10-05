@@ -5,10 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/IERC4494.sol";
 import "./ERC721A.sol";
 
-contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
+contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
     /*//////////////////////////////////////////////////////////////
@@ -35,7 +36,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
     /*//////////////////////////////////////////////////////////////
                           PRIVATE VARIABLES
     //////////////////////////////////////////////////////////////*/
-    
+
     bytes32 private immutable NAME_HASH;
     bytes32 private immutable VERSION_HASH;
     bytes32 private immutable INITIAL_DOMAIN_SEPARATOR;
@@ -112,9 +113,11 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
         external
         payable
         isSufficientSupply(quantity)
+        nonReentrant
     {
+        uint256 price = publicPrice * quantity;
         require(publicFlag, "Public sale is not active");
-        require(msg.value >= publicPrice * quantity, "Mint: Insufficient ETH");
+        require(msg.value >= price, "Mint: Insufficient ETH");
 
         if (publicMaxPerAddress > 0) {
             require(
@@ -126,6 +129,14 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
         unchecked {
             publicMinted[msg.sender] = publicMinted[msg.sender] + quantity;
         }
+
+        if (msg.value > price) {
+            (bool success, bytes memory reason) = msg.sender.call{
+                value: msg.value - price
+            }("");
+            require(success, string(reason));
+        }
+
         _safeMint(to, quantity);
 
         emit Mint(to, quantity);
@@ -135,14 +146,10 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
         address to,
         uint256 quantity,
         bytes32[] calldata proof
-    ) external payable {
-        address sender = msg.sender;
-
+    ) external payable nonReentrant {
+        uint256 price = presalePrice * quantity;
         require(presaleFlag, "Presale mint is not active");
-        require(
-            msg.value >= presalePrice * quantity,
-            "Presale mint: Insufficient ETH"
-        );
+        require(msg.value >= price, "Presale mint: Insufficient ETH");
         require(
             totalSupply() + quantity <= presaleSupply,
             "Insufficient presale token supply"
@@ -151,21 +158,29 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
             MerkleProof.verify(
                 proof,
                 _presaleMerkleRoot,
-                keccak256(abi.encodePacked(sender))
+                keccak256(abi.encodePacked(msg.sender))
             ),
             "Invalid merkle proof"
         );
 
         if (presaleMaxPerAddress > 0) {
             require(
-                presaleMinted[sender] + quantity <= presaleMaxPerAddress,
+                presaleMinted[msg.sender] + quantity <= presaleMaxPerAddress,
                 "Presale mint: Amount exceeds max per address"
             );
         }
 
         unchecked {
-            presaleMinted[sender] = presaleMinted[sender] + quantity;
+            presaleMinted[msg.sender] = presaleMinted[msg.sender] + quantity;
         }
+
+        if (msg.value > price) {
+            (bool success, bytes memory reason) = msg.sender.call{
+                value: msg.value - price
+            }("");
+            require(success, string(reason));
+        }
+
         _safeMint(to, quantity, "");
 
         emit PresaleMint(to, quantity);
@@ -175,9 +190,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
         address to,
         uint256 quantity,
         bytes32[] calldata proof
-    ) external payable {
-        address sender = msg.sender;
-
+    ) external {
         require(freeMintFlag, "Free mint is not active");
         require(
             totalSupply() + quantity <= freeMintSupply,
@@ -187,21 +200,22 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
             MerkleProof.verify(
                 proof,
                 _freeMintMerkleRoot,
-                keccak256(abi.encodePacked(sender))
+                keccak256(abi.encodePacked(msg.sender))
             ),
             "Invalid merkle proof"
         );
 
         if (freeMintMaxPerAddress > 0) {
             require(
-                freeMintMinted[sender] + quantity <= freeMintMaxPerAddress,
+                freeMintMinted[msg.sender] + quantity <= freeMintMaxPerAddress,
                 "Free mint: Amount exceeds max per address"
             );
         }
 
         unchecked {
-            freeMintMinted[sender] = freeMintMinted[sender] + quantity;
+            freeMintMinted[msg.sender] = freeMintMinted[msg.sender] + quantity;
         }
+
         _safeMint(to, quantity, "");
 
         emit FreeMint(to, quantity);
@@ -210,7 +224,6 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable {
     // NOTE: in current structure, must mint entire allotted quantity in one mint
     function founderMint(address to, uint256 quantity)
         external
-        payable
         onlyOwner
         isSufficientSupply(quantity)
     {
