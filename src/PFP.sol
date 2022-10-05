@@ -62,7 +62,9 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     event PresaleMerkleRootUpdated(bytes32 indexed root);
     event PublicPriceUpdated(uint256 indexed price);
     event PresalePriceUpdated(uint256 indexed price);
-    event MaxPerAddressUpdated(uint32 indexed quantity);
+    event PublicMaxPerAddressUpdated(uint32 indexed quantity);
+    event PresaleMaxPerAddressUpdated(uint32 indexed quantity);
+    event FreeMintMaxPerAddressUpdated(uint32 indexed quantity);
     event PresaleSupplyUpdated(uint32 indexed quantity);
     event FreeMintSupplyUpdated(uint32 indexed quantity);
     event RevealNumberUpdated(uint256 indexed amount);
@@ -265,19 +267,19 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     function setPublicMaxPerAddress(uint32 quantity) external onlyOwner {
         publicMaxPerAddress = quantity;
 
-        emit MaxPerAddressUpdated(quantity);
+        emit PublicMaxPerAddressUpdated(quantity);
     }
 
     function setPresaleMaxPerAddress(uint32 quantity) external onlyOwner {
         presaleMaxPerAddress = quantity;
 
-        emit MaxPerAddressUpdated(quantity);
+        emit PresaleMaxPerAddressUpdated(quantity);
     }
 
     function setFreeMintMaxPerAddress(uint32 quantity) external onlyOwner {
         freeMintMaxPerAddress = quantity;
 
-        emit MaxPerAddressUpdated(quantity);
+        emit FreeMintMaxPerAddressUpdated(quantity);
     }
 
     function setPresaleSupply(uint32 quantity) external onlyOwner {
