@@ -5,6 +5,11 @@ import "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import "../src/PFP.sol";
 import "../lib/murky.git/src/Merkle.sol";
+import "../src/interfaces/IERC4494.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 contract PFPTest is Test {
     PFP public pfp;
@@ -276,6 +281,34 @@ contract PFPTest is Test {
         emit FlagSwitched(true);
         pfp.switchFreemintFlag();
         assertEq(pfp.freeMintFlag(), true);
+    }
+
+    function testTokenURI() public {
+        string memory baseURI = "ipfs://ThisIsTheBaseURI/";
+        string memory preRevealURI = "ipfs://PreRevealURI/";
+        pfp.founderMint(address1, 1000);
+        pfp.setRevealNumber(10);
+
+        assertEq(pfp.tokenURI(20), "");
+
+        pfp.setPreRevealURI(preRevealURI);
+        assertEq(pfp.tokenURI(20), preRevealURI);
+
+        assertEq(pfp.tokenURI(5), preRevealURI);
+
+        pfp.setBaseURI(baseURI);
+    }
+
+    function testSupportInterface() public {
+        assertEq(pfp.supportsInterface(type(IERC4494).interfaceId), true);
+        assertEq(pfp.supportsInterface(type(IERC2981).interfaceId), true);
+        assertEq(pfp.supportsInterface(type(IERC165).interfaceId), true);
+        assertEq(pfp.supportsInterface(type(IERC721).interfaceId), true);
+        assertEq(
+            pfp.supportsInterface(type(IERC721Metadata).interfaceId),
+            true
+        );
+        assertEq(pfp.supportsInterface(type(IERC721A).interfaceId), true);
     }
 
     function _presaleSetup() private {
