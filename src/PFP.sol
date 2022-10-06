@@ -396,7 +396,8 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         return
             ERC721A.supportsInterface(interfaceId) ||
             ERC2981.supportsInterface(interfaceId) ||
-            interfaceId == type(IERC4494).interfaceId;
+            interfaceId == type(IERC4494).interfaceId ||
+            interfaceId == type(IERC721A).interfaceId;
     }
 
     function setDefaultRoyalty(address receiver, uint96 feeNumerator)
