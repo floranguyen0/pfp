@@ -311,6 +311,53 @@ contract PFPTest is Test {
         assertEq(pfp.supportsInterface(type(IERC721A).interfaceId), true);
     }
 
+    function testSetDefaultRoyalty() public {
+        (address receiver, uint256 royaltyAmount) = pfp.royaltyInfo(5, 300);
+        assertEq(receiver, address(0));
+        assertEq(royaltyAmount, 0);
+        // 1% royalty
+        pfp.setDefaultRoyalty(address2, 100);
+        (address receiverA, uint256 royaltyAmountA) = pfp.royaltyInfo(5, 300);
+        assertEq(receiverA, address2);
+        assertEq(royaltyAmountA, 3);
+    }
+
+    function testDeleteDefaultRoyalty() public {
+        pfp.setDefaultRoyalty(address2, 100);
+        pfp.deleteDefaultRoyalty();
+
+        (address receiver, uint256 royaltyAmount) = pfp.royaltyInfo(1, 100);
+        assertEq(receiver, address(0));
+        assertEq(royaltyAmount, 0);
+    }
+
+    function testSetTokenRoyalty() public {
+        // 1% royalty
+        pfp.setDefaultRoyalty(address2, 100);
+        // 10% royalty
+        pfp.setTokenRoyalty(10, address1, 1000);
+
+        (address receiver, uint256 royaltyAmount) = pfp.royaltyInfo(5, 500);
+        assertEq(receiver, address2);
+        assertEq(royaltyAmount, 5);
+
+        (address receiverA, uint256 royaltyAmountA) = pfp.royaltyInfo(10, 300);
+        assertEq(receiverA, address1);
+        assertEq(royaltyAmountA, 30);
+    }
+
+    function testResetTokenRoyalty() public {
+        pfp.setTokenRoyalty(10, address1, 1000);
+        (address receiver, uint256 royaltyAmount) = pfp.royaltyInfo(10, 500);
+        assertEq(receiver, address1);
+        assertEq(royaltyAmount, 50);
+
+        pfp.resetTokenRoyalty(10);
+        (address receiverA, uint256 royaltyAmountA) = pfp.royaltyInfo(10, 200);
+        assertEq(receiverA, address(0));
+        assertEq(royaltyAmountA, 0);
+    }
+
     function _presaleSetup() private {
         Merkle merkle = new Merkle();
         // generate whitelisted address hashes
