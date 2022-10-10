@@ -3,6 +3,7 @@ pragma solidity >=0.8.15;
 
 import "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
+import "./utils/SigUtils.sol";
 import "../src/PFP.sol";
 import "../lib/murky.git/src/Merkle.sol";
 import "../src/interfaces/IERC4494.sol";
@@ -13,6 +14,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 contract PFPTest is Test {
     PFP public pfp;
+    SigUtils public sigUtils;
     address address1 = vm.addr(1);
     address address2 = vm.addr(2);
     address address3 = vm.addr(3);
@@ -39,6 +41,7 @@ contract PFPTest is Test {
 
     function setUp() public {
         pfp = new PFP("NFTName", "NFTN", "1.0", 10_000);
+        sigUtils = new SigUtils(pfp.DOMAIN_SEPARATOR(), address(pfp));
 
         pfp.switchPublicFlag();
         // price is 0.001 eth
@@ -386,5 +389,32 @@ contract PFPTest is Test {
         pfp.setFreeMintMerkleRoot(root);
         pfp.setFreeMintSupply(500);
         pfp.setFreeMintMaxPerAddress(50);
+    }
+
+    function testTransferWithPermit() public {
+        vm.deal(address1, 100 ether);
+        vm.prank(address1);
+
+        pfp.mint{value: 1 ether}(address2, 100);
+
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            spender: address3,
+            tokenId: 10,
+            nonce: pfp.nonces(10),
+            deadline: 1 days
+        });
+
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(2, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.prank(address2);
+        pfp.transferWithPermit(address2, address3, 10, 1 days, signature);
+
+        assertEq(pfp.balanceOf(address2), 99);
+        assertEq(pfp.balanceOf(address3), 1);
+        assertEq(pfp.ownerOf(10), address3);
+        assertEq(pfp.totalSupply(), 100);
     }
 }
