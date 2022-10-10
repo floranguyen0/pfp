@@ -417,4 +417,43 @@ contract PFPTest is Test {
         assertEq(pfp.ownerOf(10), address3);
         assertEq(pfp.totalSupply(), 100);
     }
+
+    function testCannotTransferWithPermit() public {
+        vm.deal(address1, 100 ether);
+        vm.prank(address1);
+
+        pfp.mint{value: 1 ether}(address2, 100);
+
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            spender: address3,
+            tokenId: 10,
+            nonce: pfp.nonces(10),
+            deadline: 1 days
+        });
+
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(2, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.expectRevert("ERC721Permit: Approval to current owner");
+        pfp.transferWithPermit(address2, address2, 10, 1 days, signature);
+
+        // wrong tokenId
+        vm.expectRevert("ERC721Permit: Unauthorized");
+        pfp.transferWithPermit(address2, address3, 20, 1 days, signature);
+
+        // wrong dealine
+        vm.expectRevert("ERC721Permit: Unauthorized");
+        pfp.transferWithPermit(address2, address3, 10, 2 days, signature);
+
+        // wrong token owner
+        vm.expectRevert("ERC721Permit: Unauthorized");
+        pfp.transferWithPermit(address1, address3, 10, 2 days, signature);
+
+        skip(2 days);
+        vm.startPrank(address2);
+        vm.expectRevert("Permit has expired");
+        pfp.transferWithPermit(address2, address3, 10, 1 days, signature);
+    }
 }
