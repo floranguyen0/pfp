@@ -54,19 +54,41 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     event PresaleMint(address indexed to, uint256 indexed quantity);
     event FreeMint(address indexed to, uint256 indexed quantity);
     event FounderMint(address indexed to, uint256 indexed quantity);
-    event ExecTransaction(address target, bytes data, uint256 weiAmount);
+    event ExecTransaction(
+        address indexed target,
+        bytes indexed data,
+        uint256 indexed weiAmount
+    );
     event FlagSwitched(bool indexed isActive);
-    event PreRevealURIUpdated(string indexed uri);
-    event BaseURIUpdated(string indexed uri);
+    event PreRevealURIUpdated(string indexed preURI, string indexed uri);
+    event BaseURIUpdated(string indexed preURI, string indexed uri);
     event PresaleMerkleRootUpdated(bytes32 indexed root);
-    event PublicPriceUpdated(uint256 indexed price);
-    event PresalePriceUpdated(uint256 indexed price);
-    event PublicMaxPerAddressUpdated(uint32 indexed quantity);
-    event PresaleMaxPerAddressUpdated(uint32 indexed quantity);
-    event FreeMintMaxPerAddressUpdated(uint32 indexed quantity);
-    event PresaleSupplyUpdated(uint32 indexed quantity);
-    event FreeMintSupplyUpdated(uint32 indexed quantity);
-    event RevealNumberUpdated(uint256 indexed amount);
+    event PublicPriceUpdated(uint256 indexed prePrice, uint256 indexed price);
+    event PresalePriceUpdated(uint256 indexed prePrice, uint256 indexed price);
+    event PublicMaxPerAddressUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event PresaleMaxPerAddressUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event FreeMintMaxPerAddressUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event PresaleSupplyUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event FreeMintSupplyUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event RevealNumberUpdated(
+        uint256 indexed preAmount,
+        uint256 indexed amount
+    );
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -247,62 +269,72 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     }
 
     function setRevealNumber(uint192 amount) external onlyOwner {
+        uint192 preAmount = _toReveal;
         _toReveal = amount;
-        emit RevealNumberUpdated(amount);
+        emit RevealNumberUpdated(preAmount, amount);
     }
 
     function setPublicPrice(uint256 price) external onlyOwner {
+        uint256 prePrice = publicPrice;
         publicPrice = price;
 
-        emit PublicPriceUpdated(price);
+        emit PublicPriceUpdated(prePrice, price);
     }
 
     function setPresalePrice(uint256 price) external onlyOwner {
+        uint256 prePrice = presalePrice;
         presalePrice = price;
 
-        emit PresalePriceUpdated(price);
+        emit PresalePriceUpdated(prePrice, price);
     }
 
     function setPublicMaxPerAddress(uint32 quantity) external onlyOwner {
+        uint32 preQuantity = publicMaxPerAddress;
         publicMaxPerAddress = quantity;
 
-        emit PublicMaxPerAddressUpdated(quantity);
+        emit PublicMaxPerAddressUpdated(preQuantity, quantity);
     }
 
     function setPresaleMaxPerAddress(uint32 quantity) external onlyOwner {
+        uint32 preQuantity = presaleMaxPerAddress;
         presaleMaxPerAddress = quantity;
 
-        emit PresaleMaxPerAddressUpdated(quantity);
+        emit PresaleMaxPerAddressUpdated(preQuantity, quantity);
     }
 
     function setFreeMintMaxPerAddress(uint32 quantity) external onlyOwner {
+        uint32 preQuantity = freeMintMaxPerAddress;
         freeMintMaxPerAddress = quantity;
 
-        emit FreeMintMaxPerAddressUpdated(quantity);
+        emit FreeMintMaxPerAddressUpdated(preQuantity, quantity);
     }
 
     function setPresaleSupply(uint32 quantity) external onlyOwner {
+        uint32 preQuantity = presaleSupply;
         presaleSupply = quantity;
 
-        emit PresaleSupplyUpdated(quantity);
+        emit PresaleSupplyUpdated(preQuantity, quantity);
     }
 
     function setFreeMintSupply(uint32 quantity) external onlyOwner {
+        uint32 preQuantity = freeMintSupply;
         freeMintSupply = quantity;
 
-        emit FreeMintSupplyUpdated(quantity);
+        emit FreeMintSupplyUpdated(preQuantity, quantity);
     }
 
     function setBaseURI(string memory uri) external onlyOwner {
+        string memory preBaseURI = baseURI_;
         baseURI_ = uri;
 
-        emit BaseURIUpdated(uri);
+        emit BaseURIUpdated(preBaseURI, uri);
     }
 
     function setPreRevealURI(string memory uri) external onlyOwner {
+        string memory preURI = _preRevealURI;
         _preRevealURI = uri;
 
-        emit PreRevealURIUpdated(uri);
+        emit PreRevealURIUpdated(preURI, uri);
     }
 
     function setPresaleMerkleRoot(bytes32 merkleRoot) external onlyOwner {
