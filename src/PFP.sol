@@ -160,6 +160,18 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
             require(success, string(reason));
         }
 
+        for (uint256 i = 0; i < quantity; i++) {
+            (address receiver, uint256 royaltyAmount) = royaltyInfo(
+                _nextTokenId() + i,
+                price
+            );
+
+            (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
+                value: royaltyAmount
+            }("");
+            require(royaltySuccess, string(returnedReason));
+        }
+
         _safeMint(to, quantity);
 
         emit Mint(to, quantity);
@@ -202,6 +214,18 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
                 value: msg.value - price
             }("");
             require(success, string(reason));
+        }
+
+        for (uint256 i = 0; i < quantity; i++) {
+            (address receiver, uint256 royaltyAmount) = royaltyInfo(
+                _nextTokenId() + i,
+                price
+            );
+
+            (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
+                value: royaltyAmount
+            }("");
+            require(royaltySuccess, string(returnedReason));
         }
 
         _safeMint(to, quantity, "");
