@@ -362,6 +362,10 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         emit FlagSwitched(!freeMintFlag_);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                          PRIVATE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     function _processPayment(
         uint256 amountSent,
         uint256 price,
