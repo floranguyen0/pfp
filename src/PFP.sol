@@ -152,25 +152,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         unchecked {
             publicMinted[msg.sender] = publicMinted[msg.sender] + quantity;
         }
-
-        if (msg.value > price) {
-            (bool success, bytes memory reason) = msg.sender.call{
-                value: msg.value - price
-            }("");
-            require(success, string(reason));
-        }
-
-        for (uint256 i = 0; i < quantity; i++) {
-            (address receiver, uint256 royaltyAmount) = royaltyInfo(
-                _nextTokenId() + i,
-                price
-            );
-
-            (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
-                value: royaltyAmount
-            }("");
-            require(royaltySuccess, string(returnedReason));
-        }
+        _processPayment(msg.value, price, quantity);
 
         _safeMint(to, quantity);
 
@@ -209,24 +191,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
             presaleMinted[msg.sender] = presaleMinted[msg.sender] + quantity;
         }
 
-        if (msg.value > price) {
-            (bool success, bytes memory reason) = msg.sender.call{
-                value: msg.value - price
-            }("");
-            require(success, string(reason));
-        }
-
-        for (uint256 i = 0; i < quantity; i++) {
-            (address receiver, uint256 royaltyAmount) = royaltyInfo(
-                _nextTokenId() + i,
-                price
-            );
-
-            (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
-                value: royaltyAmount
-            }("");
-            require(royaltySuccess, string(returnedReason));
-        }
+        _processPayment(msg.value, price, quantity);
 
         _safeMint(to, quantity, "");
 
@@ -395,6 +360,32 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         freeMintFlag = !freeMintFlag_;
 
         emit FlagSwitched(!freeMintFlag_);
+    }
+
+    function _processPayment(
+        uint256 amountSent,
+        uint256 price,
+        uint256 quantity
+    ) private {
+        // refund the excess amount
+        if (amountSent > price) {
+            (bool success, bytes memory reason) = msg.sender.call{
+                value: amountSent - price
+            }("");
+            require(success, string(reason));
+        }
+        // send royalty to the receiver
+        for (uint256 i = 0; i < quantity; i++) {
+            (address receiver, uint256 royaltyAmount) = royaltyInfo(
+                _nextTokenId() + i,
+                price
+            );
+
+            (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
+                value: royaltyAmount
+            }("");
+            require(royaltySuccess, string(returnedReason));
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
