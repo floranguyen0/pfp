@@ -25,19 +25,41 @@ contract PFPTest is Test {
     event PresaleMint(address indexed to, uint256 indexed quantity);
     event FreeMint(address indexed to, uint256 indexed quantity);
     event FounderMint(address indexed to, uint256 indexed quantity);
-    event ExecTransaction(address target, bytes data, uint256 weiAmount);
+    event ExecTransaction(
+        address indexed target,
+        bytes indexed data,
+        uint256 indexed weiAmount
+    );
     event FlagSwitched(bool indexed isActive);
-    event PreRevealURIUpdated(string indexed uri);
-    event BaseURIUpdated(string indexed uri);
+    event PreRevealURIUpdated(string indexed preURI, string indexed uri);
+    event BaseURIUpdated(string indexed preURI, string indexed uri);
     event PresaleMerkleRootUpdated(bytes32 indexed root);
-    event PublicPriceUpdated(uint256 indexed price);
-    event PresalePriceUpdated(uint256 indexed price);
-    event PublicMaxPerAddressUpdated(uint32 indexed quantity);
-    event PresaleMaxPerAddressUpdated(uint32 indexed quantity);
-    event FreeMintMaxPerAddressUpdated(uint32 indexed quantity);
-    event PresaleSupplyUpdated(uint32 indexed quantity);
-    event FreeMintSupplyUpdated(uint32 indexed quantity);
-    event RevealNumberUpdated(uint256 indexed amount);
+    event PublicPriceUpdated(uint256 indexed prePrice, uint256 indexed price);
+    event PresalePriceUpdated(uint256 indexed prePrice, uint256 indexed price);
+    event PublicMaxPerAddressUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event PresaleMaxPerAddressUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event FreeMintMaxPerAddressUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event PresaleSupplyUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event FreeMintSupplyUpdated(
+        uint32 indexed preQuantity,
+        uint32 indexed quantity
+    );
+    event RevealNumberUpdated(
+        uint256 indexed preAmount,
+        uint256 indexed amount
+    );
 
     function setUp() public {
         pfp = new PFP("NFTName", "NFTN", "1.0", 10_000);
@@ -46,13 +68,13 @@ contract PFPTest is Test {
         pfp.switchPublicFlag();
         // price is 0.001 eth
         pfp.setPublicPrice(10**15);
-        pfp.setPublicMaxPerAddress(300);
+        pfp.setPublicMaxPerAddress(200);
 
         vm.stopPrank();
     }
 
     function testMint(uint256 amount) public {
-        amount = bound(amount, 1, 300);
+        amount = bound(amount, 1, 200);
         vm.deal(address1, 100 ether);
         vm.prank(address1);
 
@@ -214,50 +236,50 @@ contract PFPTest is Test {
     function testSetRevealNumber() public {}
 
     function testSetPublicPrice() public {
-        vm.expectEmit(true, false, false, false);
-        emit PublicPriceUpdated(10**18);
+        vm.expectEmit(true, true, false, true);
+        emit PublicPriceUpdated(10**15, 10**18);
         pfp.setPublicPrice(10**18);
         assertEq(pfp.publicPrice(), 10**18);
     }
 
     function testSetPresalePrice() public {
-        vm.expectEmit(true, false, false, false);
-        emit PresalePriceUpdated(10**17);
+        vm.expectEmit(true, true, false, true);
+        emit PresalePriceUpdated(0, 10**17);
         pfp.setPresalePrice(10**17);
         assertEq(pfp.presalePrice(), 10**17);
     }
 
     function testSetPublicMaxPerAddress() public {
-        vm.expectEmit(true, false, false, false);
-        emit PublicMaxPerAddressUpdated(300);
+        vm.expectEmit(true, true, false, true);
+        emit PublicMaxPerAddressUpdated(200, 300);
         pfp.setPublicMaxPerAddress(300);
         assertEq(pfp.publicMaxPerAddress(), 300);
     }
 
     function testSetPresaleMaxPerAddress() public {
-        vm.expectEmit(true, false, false, false);
-        emit PresaleMaxPerAddressUpdated(200);
+        vm.expectEmit(true, true, false, true);
+        emit PresaleMaxPerAddressUpdated(0, 200);
         pfp.setPresaleMaxPerAddress(200);
         assertEq(pfp.presaleMaxPerAddress(), 200);
     }
 
     function testSetFreeMintMaxPerAddress() public {
-        vm.expectEmit(true, false, false, false);
-        emit FreeMintMaxPerAddressUpdated(50);
+        vm.expectEmit(true, true, false, true);
+        emit FreeMintMaxPerAddressUpdated(0, 50);
         pfp.setFreeMintMaxPerAddress(50);
         assertEq(pfp.freeMintMaxPerAddress(), 50);
     }
 
     function testSetPresaleSupply() public {
-        vm.expectEmit(true, false, false, false);
-        emit PresaleSupplyUpdated(1000);
+        vm.expectEmit(true, true, false, true);
+        emit PresaleSupplyUpdated(0, 1000);
         pfp.setPresaleSupply(1000);
         assertEq(pfp.presaleSupply(), 1000);
     }
 
     function testSetFreeMintSupply() public {
-        vm.expectEmit(true, false, false, false);
-        emit FreeMintSupplyUpdated(500);
+        vm.expectEmit(true, true, false, true);
+        emit FreeMintSupplyUpdated(0, 500);
         pfp.setFreeMintSupply(500);
         assertEq(pfp.freeMintSupply(), 500);
     }
