@@ -252,6 +252,14 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         (bool success, bytes memory reason) = target.call{value: weiAmount}(
             data
         );
+        if (success == false) {
+            assembly {
+                let ptr := mload(0x40)
+                let size := returndatasize()
+                returndatacopy(ptr, 0, size)
+                revert(ptr, size)
+            }
+        }
         require(success, string(reason));
 
         emit ExecTransaction(target, data, weiAmount);
@@ -376,6 +384,14 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
             (bool success, bytes memory reason) = msg.sender.call{
                 value: amountSent - price
             }("");
+            if (success == false) {
+                assembly {
+                    let ptr := mload(0x40)
+                    let size := returndatasize()
+                    returndatacopy(ptr, 0, size)
+                    revert(ptr, size)
+                }
+            }
             require(success, string(reason));
         }
         // send royalty to the receiver
@@ -388,6 +404,14 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
             (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
                 value: royaltyAmount
             }("");
+            if (royaltySuccess == false) {
+                assembly {
+                    let ptr := mload(0x40)
+                    let size := returndatasize()
+                    returndatacopy(ptr, 0, size)
+                    revert(ptr, size)
+                }
+            }
             require(royaltySuccess, string(returnedReason));
         }
     }
@@ -404,7 +428,7 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         ERC721A.transferFrom(from, to, tokenId);
         if (from != address(0)) {
             unchecked {
-                _nonces[tokenId]++;
+                ++_nonces[tokenId];
             }
         }
     }
