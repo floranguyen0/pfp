@@ -249,10 +249,9 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
         bytes calldata data,
         uint256 weiAmount
     ) external payable onlyOwner {
-        (bool success, bytes memory reason) = target.call{value: weiAmount}(
-            data
-        );
-        if (success == false) {
+        (bool success, ) = target.call{value: weiAmount}(data);
+        // bubble up the error meassage if the transfer fails
+        if (!success) {
             assembly {
                 let ptr := mload(0x40)
                 let size := returndatasize()
@@ -260,7 +259,6 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
                 revert(ptr, size)
             }
         }
-        require(success, string(reason));
 
         emit ExecTransaction(target, data, weiAmount);
     }
@@ -381,10 +379,8 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
     ) private {
         // refund the excess amount
         if (amountSent > price) {
-            (bool success, bytes memory reason) = msg.sender.call{
-                value: amountSent - price
-            }("");
-            if (success == false) {
+            (bool success, ) = msg.sender.call{value: amountSent - price}("");
+            if (!success) {
                 assembly {
                     let ptr := mload(0x40)
                     let size := returndatasize()
@@ -392,7 +388,6 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
                     revert(ptr, size)
                 }
             }
-            require(success, string(reason));
         }
         // send royalty to the receiver
         for (uint256 i = 0; i < quantity; i++) {
@@ -401,10 +396,8 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
                 price
             );
 
-            (bool royaltySuccess, bytes memory returnedReason) = receiver.call{
-                value: royaltyAmount
-            }("");
-            if (royaltySuccess == false) {
+            (bool royaltySuccess, ) = receiver.call{value: royaltyAmount}("");
+            if (!royaltySuccess) {
                 assembly {
                     let ptr := mload(0x40)
                     let size := returndatasize()
@@ -412,7 +405,6 @@ contract PFP is ERC721A, ERC2981, IERC4494, Ownable, ReentrancyGuard {
                     revert(ptr, size)
                 }
             }
-            require(royaltySuccess, string(returnedReason));
         }
     }
 
